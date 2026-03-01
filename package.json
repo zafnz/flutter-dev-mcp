@@ -1,0 +1,23 @@
+{
+  "name": "flutter-dev-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Flutter development",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "flutter-dev-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@types/node": "^25.3.3",
+    "typescript": "^5.9.3",
+    "zod": "^4.3.6"
+  }
+}
