@@ -12,6 +12,27 @@ Key design decisions:
 - **`flutter run` is managed**: The server holds the process, exposes hot reload/restart/logs/kill as separate tools, so the agent doesn't need terminal access.
 - **Inputs are sanitized**: All commands use array-based process spawning (no shell). Project paths are normalized and validated. Package names and device IDs are checked for flag injection.
 
+## Tools at a glance
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `flutter_test` | project_dir, [test_path], [test_name] | Run tests and return a compact summary of failures only. Use `flutter_get_result` to drill into specific failures. |
+| `flutter_get_result` | test_run_id, test_ids | Get full error details for specific test IDs from a previous `flutter_test` run. Output capped at 24KB. |
+| `flutter_run` | project_dir, [device], [is_debug], [dont_detach] | Start a Flutter app on `device` (e.g. `macos`, `chrome`, emulator ID) in debug or release mode. By default detaches after the app starts and returns a `run_id`. |
+| `flutter_hot_reload` | run_id | Hot reload a running app. |
+| `flutter_hot_restart` | run_id | Hot restart a running app. |
+| `flutter_kill` | run_id | Kill a running app. Graceful shutdown, force-kills after 5s. |
+| `flutter_logs` | run_id | Get logs from a running app. Returns the most recent output, capped at 24KB. |
+| `flutter_analyze` | project_dir | Run static analysis. Returns structured issues with severity, file, line, column, and rule name. |
+| `flutter_devices` | [wireless] | List available devices (simulators, emulators, physical). Skips wireless scan by default. |
+| `flutter_clean` | project_dir | Delete build artifacts. Useful when builds get into a bad state. |
+| `flutter_pub_get` | project_dir | Resolve and download dependencies. |
+| `flutter_pub_add` | project_dir, packages, [dev] | Add one or more packages. Supports `dev` dependencies. |
+| `flutter_gen_l10n` | project_dir | Generate localization files from ARB files. |
+| `flutter_build_runner` | project_dir, [delete_conflicting] | Run `build_runner` for code generation (freezed, json_serializable, drift, etc.). |
+
+Parameters in `[brackets]` are optional.
+
 ## Install
 
 Requires Node.js 18+ and Flutter SDK on your PATH.
@@ -215,4 +236,4 @@ node dist/index.js
 
 ## License
 
-ISC
+MIT
