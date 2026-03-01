@@ -44,7 +44,16 @@ npm install -g flutter-dev-mcp
 Or run directly with npx (recommended):
 
 ```bash
-npx flutter-dev-mcp
+npx -y flutter-dev-mcp
+```
+
+### Options
+
+```
+--limit-tools  Only expose tools that provide significant benefit over
+               direct CLI usage (testing, app lifecycle, logs). Omits
+               analyze, devices, clean, pub get/add, gen-l10n, and
+               build_runner, which agents can run via shell without issue.
 ```
 
 ## Configuration
@@ -58,7 +67,7 @@ Add to your MCP settings (`~/.claude.json` or project `.mcp.json`):
   "mcpServers": {
     "flutter-dev": {
       "command": "npx",
-      "args": ["flutter-dev-mcp"]
+      "args": ["-y", "flutter-dev-mcp"]
     }
   }
 }
@@ -73,7 +82,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "flutter-dev": {
       "command": "npx",
-      "args": ["flutter-dev-mcp"]
+      "args": ["-y", "flutter-dev-mcp"]
     }
   }
 }
@@ -84,7 +93,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 Any agent that supports MCP can use this server. Point it at the stdio transport:
 
 ```bash
-npx flutter-dev-mcp
+npx -y flutter-dev-mcp
 ```
 
 The server communicates over stdin/stdout using the MCP JSON-RPC protocol.

@@ -16,6 +16,26 @@ import { flutterDevices } from "./flutter-devices.js";
 import { flutterClean, flutterPubGet, flutterPubAdd, flutterGenL10n, flutterBuildRunner } from "./flutter-commands.js";
 import { validateProjectDir, validatePackageName, validateTestPath, validateDeviceId } from "./validate.js";
 
+// --- CLI args ---
+const args = process.argv.slice(2);
+
+if (args.includes("--help") || args.includes("-h")) {
+  console.error(`flutter-dev-mcp - MCP server for Flutter development
+
+Usage: flutter-dev-mcp [options]
+
+Options:
+  --limit-tools  Only expose tools that provide significant benefit over
+                 direct CLI usage (testing, app lifecycle, logs). Omits
+                 analyze, devices, clean, pub get/add, gen-l10n, and
+                 build_runner, which agents can run via shell without issue.
+  --help, -h     Show this help message
+`);
+  process.exit(0);
+}
+
+const limitTools = args.includes("--limit-tools");
+
 const server = new McpServer({
   name: "flutter-dev-mcp",
   version: "1.0.0",
@@ -180,6 +200,9 @@ server.registerTool("flutter_logs", {
     isError: !!result.error,
   };
 });
+
+// --- Extra tools (excluded with --limit-tools) ---
+if (!limitTools) {
 
 // --- flutter_analyze ---
 server.registerTool("flutter_analyze", {
@@ -352,11 +375,12 @@ server.registerTool("flutter_build_runner", {
   }
 });
 
+} // end if (!limitTools)
+
 // --- Start server ---
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Flutter Dev MCP server running on stdio");
 }
 
 main().catch((err) => {
