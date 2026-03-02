@@ -19,6 +19,14 @@ import { validateProjectDir, validatePackageName, validateTestPath, validateDevi
 // --- CLI args ---
 const args = process.argv.slice(2);
 
+if (args.includes("--version") || args.includes("-v")) {
+  const { createRequire } = await import("node:module");
+  const require = createRequire(import.meta.url);
+  const pkg = require("../package.json") as { version: string };
+  console.log(pkg.version);
+  process.exit(0);
+}
+
 if (args.includes("--help") || args.includes("-h")) {
   console.error(`flutter-dev-mcp - MCP server for Flutter development
 
@@ -29,6 +37,7 @@ Options:
                  direct CLI usage (testing, app lifecycle, logs). Omits
                  analyze, devices, clean, pub get/add, gen-l10n, and
                  build_runner, which agents can run via shell without issue.
+  --version, -v  Show version number
   --help, -h     Show this help message
 `);
   process.exit(0);

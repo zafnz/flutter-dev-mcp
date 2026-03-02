@@ -38,6 +38,7 @@ interface TestRunResult {
   tests_run: number;
   tests_failed: number;
   results: TestRunSummary[];
+  truncated: boolean;
 }
 
 // Store test results keyed by test_run_id
@@ -45,6 +46,7 @@ const testRunStore = new Map<number, StoredTestResult[]>();
 let nextTestRunId = 1;
 
 const MAX_EXCERPT_LENGTH = 200;
+const MAX_SUMMARY_BYTES = 24 * 1024;
 
 export async function flutterTest(
   projectDir: string,
@@ -130,6 +132,8 @@ export async function flutterTest(
   // Build results for failed tests
   const storedResults: StoredTestResult[] = [];
   const summaryResults: TestRunSummary[] = [];
+  let summarySize = 0;
+  let truncated = false;
 
   for (const testId of failedTestIds) {
     const test = tests.get(testId);
@@ -153,6 +157,7 @@ export async function flutterTest(
     }
     const fullError = parts.join("\n\n");
 
+    // Always store full results for flutter_get_result
     storedResults.push({
       test_id: testId,
       test_file: testFile,
@@ -160,12 +165,22 @@ export async function flutterTest(
       error: fullError,
     });
 
-    summaryResults.push({
-      test_id: testId,
-      test_file: testFile,
-      test_name: test.name,
-      error_excerpt: fullError.substring(0, MAX_EXCERPT_LENGTH) + (fullError.length > MAX_EXCERPT_LENGTH ? "..." : ""),
-    });
+    // Cap the summary output
+    if (!truncated) {
+      const summary: TestRunSummary = {
+        test_id: testId,
+        test_file: testFile,
+        test_name: test.name,
+        error_excerpt: fullError.substring(0, MAX_EXCERPT_LENGTH) + (fullError.length > MAX_EXCERPT_LENGTH ? "..." : ""),
+      };
+      const entrySize = Buffer.byteLength(JSON.stringify(summary), "utf-8");
+      if (summarySize + entrySize > MAX_SUMMARY_BYTES) {
+        truncated = true;
+      } else {
+        summaryResults.push(summary);
+        summarySize += entrySize;
+      }
+    }
   }
 
   const testRunId = nextTestRunId++;
@@ -173,10 +188,11 @@ export async function flutterTest(
 
   return {
     test_run_id: testRunId,
-    success: summaryResults.length === 0,
+    success: failedTestIds.size === 0,
     tests_run: testsRun,
-    tests_failed: summaryResults.length,
+    tests_failed: failedTestIds.size,
     results: summaryResults,
+    truncated,
   };
 }
 
