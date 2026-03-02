@@ -34,6 +34,9 @@ interface TestRunSummary {
 
 interface TestRunResult {
   test_run_id: number;
+  success: boolean;
+  tests_run: number;
+  tests_failed: number;
   results: TestRunSummary[];
 }
 
@@ -68,6 +71,7 @@ export async function flutterTest(
   const tests = new Map<number, TestInfo>();
   const errors = new Map<number, TestError[]>();
   const failedTestIds = new Set<number>();
+  let testsRun = 0;
 
   for (const event of events) {
     switch (event.type) {
@@ -101,8 +105,11 @@ export async function flutterTest(
         break;
 
       case "testDone":
-        if (event.result !== "success" && !event.hidden) {
-          failedTestIds.add(event.testID);
+        if (!event.hidden) {
+          testsRun++;
+          if (event.result !== "success") {
+            failedTestIds.add(event.testID);
+          }
         }
         break;
     }
@@ -147,6 +154,9 @@ export async function flutterTest(
 
   return {
     test_run_id: testRunId,
+    success: summaryResults.length === 0,
+    tests_run: testsRun,
+    tests_failed: summaryResults.length,
     results: summaryResults,
   };
 }

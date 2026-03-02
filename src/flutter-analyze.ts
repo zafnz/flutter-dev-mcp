@@ -14,6 +14,7 @@ export interface AnalyzeResult {
   error_count: number;
   warning_count: number;
   info_count: number;
+  truncated: boolean;
 }
 
 export async function flutterAnalyze(
@@ -27,8 +28,12 @@ export async function flutterAnalyze(
 // Pattern: "   info • message • file:line:col • rule_name"
 const issuePattern = /^\s*(error|warning|info)\s+•\s+(.+?)\s+•\s+(.+?):(\d+):(\d+)\s+•\s+(\S+)\s*$/;
 
+const MAX_OUTPUT_BYTES = 20 * 1024;
+
+const severityOrder: Record<string, number> = { error: 0, warning: 1, info: 2 };
+
 function parseAnalyzeOutput(output: string): AnalyzeResult {
-  const issues: AnalyzeIssue[] = [];
+  const allIssues: AnalyzeIssue[] = [];
   let errorCount = 0;
   let warningCount = 0;
   let infoCount = 0;
@@ -38,7 +43,12 @@ function parseAnalyzeOutput(output: string): AnalyzeResult {
     if (!match) continue;
 
     const severity = match[1] as "error" | "warning" | "info";
-    issues.push({
+
+    if (severity === "error") errorCount++;
+    else if (severity === "warning") warningCount++;
+    else infoCount++;
+
+    allIssues.push({
       severity,
       message: match[2]!,
       file: match[3]!,
@@ -46,10 +56,25 @@ function parseAnalyzeOutput(output: string): AnalyzeResult {
       column: parseInt(match[5]!, 10),
       rule: match[6]!,
     });
+  }
 
-    if (severity === "error") errorCount++;
-    else if (severity === "warning") warningCount++;
-    else infoCount++;
+  // Sort by severity (errors first, then warnings, then info) so
+  // truncation drops low-priority issues first
+  allIssues.sort((a, b) => severityOrder[a.severity]! - severityOrder[b.severity]!);
+
+  // Truncate to fit within output limit
+  const issues: AnalyzeIssue[] = [];
+  let totalSize = 0;
+  let truncated = false;
+
+  for (const issue of allIssues) {
+    const issueSize = Buffer.byteLength(JSON.stringify(issue), "utf-8");
+    if (totalSize + issueSize > MAX_OUTPUT_BYTES) {
+      truncated = true;
+      break;
+    }
+    issues.push(issue);
+    totalSize += issueSize;
   }
 
   return {
@@ -57,6 +82,7 @@ function parseAnalyzeOutput(output: string): AnalyzeResult {
     error_count: errorCount,
     warning_count: warningCount,
     info_count: infoCount,
+    truncated,
   };
 }
 
