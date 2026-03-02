@@ -70,6 +70,7 @@ export async function flutterTest(
   const suites = new Map<number, SuiteInfo>();
   const tests = new Map<number, TestInfo>();
   const errors = new Map<number, TestError[]>();
+  const prints = new Map<number, string[]>();
   const failedTestIds = new Set<number>();
   let testsRun = 0;
 
@@ -90,6 +91,17 @@ export async function flutterTest(
             suiteID: event.test.suiteID,
             rootUrl: event.test.root_url ?? event.test.url,
           });
+        }
+        break;
+
+      case "print":
+        // Capture print messages per test — exceptions from the Flutter
+        // test framework are often reported here rather than in error events
+        if (event.testID != null) {
+          if (!prints.has(event.testID)) {
+            prints.set(event.testID, []);
+          }
+          prints.get(event.testID)!.push(event.message);
         }
         break;
 
@@ -129,10 +141,17 @@ export async function flutterTest(
       ? test.rootUrl.replace(/^file:\/\//, "")
       : suite?.path ?? "unknown";
     const testErrors = errors.get(testId) ?? [];
+    const testPrints = prints.get(testId) ?? [];
 
-    const fullError = testErrors
-      .map((e) => `${e.error}\n${e.stackTrace}`)
-      .join("\n\n");
+    // Concatenate everything we have — print messages and error events
+    const parts: string[] = [];
+    if (testPrints.length > 0) {
+      parts.push(testPrints.join("\n"));
+    }
+    if (testErrors.length > 0) {
+      parts.push(testErrors.map((e) => `${e.error}\n${e.stackTrace}`).join("\n\n"));
+    }
+    const fullError = parts.join("\n\n");
 
     storedResults.push({
       test_id: testId,
