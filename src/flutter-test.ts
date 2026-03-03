@@ -93,14 +93,12 @@ export async function flutterTest(
         break;
 
       case "testStart":
-        if (event.test.url !== null) {
-          tests.set(event.test.id, {
-            id: event.test.id,
-            name: event.test.name,
-            suiteID: event.test.suiteID,
-            rootUrl: event.test.root_url ?? event.test.url,
-          });
-        }
+        tests.set(event.test.id, {
+          id: event.test.id,
+          name: event.test.name,
+          suiteID: event.test.suiteID,
+          rootUrl: event.test.root_url ?? event.test.url ?? null,
+        });
         break;
 
       case "print":
@@ -147,10 +145,13 @@ export async function flutterTest(
     if (!test) continue;
 
     const suite = suites.get(test.suiteID);
-    // Prefer root_url (actual test file) over suite path
+    // Prefer root_url (actual test file), then suite path, then extract from
+    // test name (loading errors use "loading /path/to/test.dart" as the name)
     const testFile = test.rootUrl
       ? test.rootUrl.replace(/^file:\/\//, "")
-      : suite?.path ?? "unknown";
+      : suite?.path
+        ? suite.path
+        : test.name.replace(/^loading\s+/, "") || "unknown";
     const testErrors = errors.get(testId) ?? [];
     const testPrints = prints.get(testId) ?? [];
 
