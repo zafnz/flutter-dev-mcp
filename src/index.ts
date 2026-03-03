@@ -13,7 +13,7 @@ import {
 } from "./flutter-run.js";
 import { flutterAnalyze } from "./flutter-analyze.js";
 import { flutterDevices } from "./flutter-devices.js";
-import { flutterClean, flutterPubGet, flutterPubAdd, flutterGenL10n, flutterBuildRunner } from "./flutter-commands.js";
+import { flutterClean, flutterPubGet, flutterPubAdd, flutterGenL10n, flutterBuildRunner, flutterBuild } from "./flutter-commands.js";
 import { validateProjectDir, validatePackageName, validateTestPath, validateDeviceId } from "./validate.js";
 
 // --- CLI args ---
@@ -35,8 +35,8 @@ Usage: flutter-dev-mcp [options]
 Options:
   --limit-tools  Only expose tools that provide significant benefit over
                  direct CLI usage (testing, app lifecycle, logs). Omits
-                 analyze, devices, clean, pub get/add, gen-l10n, and
-                 build_runner, which agents can run via shell without issue.
+                 analyze, devices, clean, pub get/add, gen-l10n, build,
+                 and build_runner, which agents can run via shell.
   --version, -v  Show version number
   --help, -h     Show this help message
 `);
@@ -64,12 +64,13 @@ server.registerTool("flutter_test", {
       .string()
       .optional()
       .describe("Filter tests by name (plain string match)"),
+    extra_args: z.array(z.string()).default([]).describe("Additional flags to pass to flutter test (e.g. ['--coverage', '--dart-define=KEY=VALUE'])"),
   },
-}, async ({ project_dir, test_path, test_name }) => {
+}, async ({ project_dir, test_path, test_name, extra_args }) => {
   try {
     const dir = validateProjectDir(project_dir);
     const path = test_path ? validateTestPath(test_path) : undefined;
-    const result = await flutterTest(dir, path, test_name);
+    const result = await flutterTest(dir, path, test_name, extra_args);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
     };
@@ -129,12 +130,13 @@ server.registerTool("flutter_run", {
       .describe("Target device ID (e.g. 'chrome', 'macos', an emulator ID). Empty for default."),
     is_debug: z.boolean().default(true).describe("Run in debug mode (true) or release mode (false)"),
     dont_detach: z.boolean().default(false).describe("If true, wait for the app to finish instead of returning immediately after start"),
+    extra_args: z.array(z.string()).default([]).describe("Additional flags to pass to flutter run (e.g. ['--flavor=dev', '--dart-define=KEY=VALUE'])"),
   },
-}, async ({ project_dir, device, is_debug, dont_detach }) => {
+}, async ({ project_dir, device, is_debug, dont_detach, extra_args }) => {
   try {
     const dir = validateProjectDir(project_dir);
     const dev = device ? validateDeviceId(device) : "";
-    const result = await flutterRun(dir, dev, is_debug, dont_detach);
+    const result = await flutterRun(dir, dev, is_debug, dont_detach, extra_args);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
     };
@@ -372,6 +374,31 @@ server.registerTool("flutter_build_runner", {
   try {
     const dir = validateProjectDir(project_dir);
     const result = await flutterBuildRunner(dir, delete_conflicting);
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+      isError: !result.success,
+    };
+  } catch (err) {
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }) }],
+      isError: true,
+    };
+  }
+});
+
+// --- flutter_build ---
+server.registerTool("flutter_build", {
+  description: "Build a Flutter app for a target platform (e.g. apk, ios, web, macos). Can take a long time.",
+  inputSchema: {
+    project_dir: z.string().describe("Path to the Flutter project directory"),
+    target: z.string().describe("Build target (e.g. 'apk', 'ios', 'web', 'macos', 'windows', 'linux', 'ipa', 'appbundle')"),
+    debug: z.boolean().default(true).describe("Build in debug mode (true) or release mode (false)"),
+    extra_args: z.array(z.string()).default([]).describe("Additional flags to pass to flutter build (e.g. ['--simulator', '--flavor=dev'])"),
+  },
+}, async ({ project_dir, target, debug, extra_args }) => {
+  try {
+    const dir = validateProjectDir(project_dir);
+    const result = await flutterBuild(dir, target, debug, extra_args);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
       isError: !result.success,

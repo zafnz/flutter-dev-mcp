@@ -16,9 +16,9 @@ Key design decisions:
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
-| `flutter_test` | project_dir, [test_path], [test_name] | Run tests and return a compact summary of failures only. Use `flutter_get_result` to drill into specific failures. |
+| `flutter_test` | project_dir, [test_path], [test_name], [extra_args] | Run tests and return a compact summary of failures only. Use `flutter_get_result` to drill into specific failures. |
 | `flutter_get_result` | test_run_id, test_ids | Get full error details for specific test IDs from a previous `flutter_test` run. Output capped at 24KB. |
-| `flutter_run` | project_dir, [device], [is_debug], [dont_detach] | Start a Flutter app on `device` (e.g. `macos`, `chrome`, emulator ID) in debug or release mode. By default detaches after the app starts and returns a `run_id`. |
+| `flutter_run` | project_dir, [device], [is_debug], [dont_detach], [extra_args] | Start a Flutter app on `device` (e.g. `macos`, `chrome`, emulator ID) in debug or release mode. By default detaches after the app starts and returns a `run_id`. |
 | `flutter_hot_reload` | run_id | Hot reload a running app. |
 | `flutter_hot_restart` | run_id | Hot restart a running app. |
 | `flutter_kill` | run_id | Kill a running app. Graceful shutdown, force-kills after 5s. |
@@ -29,6 +29,7 @@ Key design decisions:
 | `flutter_pub_get` | project_dir | Resolve and download dependencies. |
 | `flutter_pub_add` | project_dir, packages, [dev] | Add one or more packages. Supports `dev` dependencies. |
 | `flutter_gen_l10n` | project_dir | Generate localization files from ARB files. |
+| `flutter_build` | project_dir, target, [debug], [extra_args] | Build the app for a target platform (apk, ios, web, macos, etc.). |
 | `flutter_build_runner` | project_dir, [delete_conflicting] | Run `build_runner` for code generation (freezed, json_serializable, drift, etc.). |
 
 Parameters in `[brackets]` are optional.
@@ -52,8 +53,8 @@ npx -y flutter-dev-mcp
 ```
 --limit-tools  Only expose tools that provide significant benefit over
                direct CLI usage (testing, app lifecycle, logs). Omits
-               analyze, devices, clean, pub get/add, gen-l10n, and
-               build_runner, which agents can run via shell without issue.
+               analyze, devices, clean, pub get/add, gen-l10n, build,
+               and build_runner, which agents can run via shell.
 ```
 
 ## Configuration
@@ -100,6 +101,7 @@ Run tests and get a summary of failures.
 | `project_dir` | string | yes | Path to the Flutter project |
 | `test_path` | string | no | Specific test file or directory |
 | `test_name` | string | no | Filter by test name (plain string match) |
+| `extra_args` | string[] | no | Additional flags (e.g. `["--coverage", "--dart-define=KEY=VALUE"]`) |
 
 Returns a `test_run_id` and an array of failed tests with short error excerpts. Pass the `test_run_id` to `flutter_get_result` for full details.
 
@@ -126,6 +128,7 @@ Start a Flutter app and get a `run_id` for subsequent commands.
 | `device` | string | no | `""` | Device ID (e.g. `chrome`, `macos`, emulator ID) |
 | `is_debug` | boolean | no | `true` | Debug mode (true) or release mode (false) |
 | `dont_detach` | boolean | no | `false` | Wait for app to exit instead of returning after start |
+| `extra_args` | string[] | no | `[]` | Additional flags (e.g. `["--flavor=dev", "--dart-define=KEY=VALUE"]`) |
 
 #### `flutter_hot_reload`
 
@@ -176,6 +179,19 @@ List available devices.
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `wireless` | boolean | no | `false` | Include wireless devices (slower) |
+
+### Build
+
+#### `flutter_build`
+
+Build the app for a target platform. Can take a long time for release builds.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `project_dir` | string | yes | | Path to the Flutter project |
+| `target` | string | yes | | Build target: `apk`, `appbundle`, `ios`, `ipa`, `web`, `macos`, `windows`, `linux`, `aar`, `bundle`, `ios-framework`, `macos-framework` |
+| `debug` | boolean | no | `true` | Debug mode (true) or release mode (false) |
+| `extra_args` | string[] | no | `[]` | Additional flags (e.g. `["--simulator", "--flavor=dev"]`) |
 
 ### Dependencies & codegen
 

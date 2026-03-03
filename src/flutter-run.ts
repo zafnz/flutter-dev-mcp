@@ -25,6 +25,7 @@ export async function flutterRun(
   device: string,
   isDebug: boolean,
   dontDetach: boolean,
+  extraArgs: string[],
 ): Promise<FlutterRunResult> {
   const args = ["run"];
 
@@ -33,6 +34,10 @@ export async function flutterRun(
   }
 
   args.push(isDebug ? "--debug" : "--release");
+
+  // Safe: spawn() without shell:true passes args as argv directly,
+  // so shell metacharacters like $() are never interpreted.
+  args.push(...extraArgs);
 
   const runId = nextRunId++;
   const proc = spawn("flutter", args, {

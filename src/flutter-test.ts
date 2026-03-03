@@ -52,6 +52,7 @@ export async function flutterTest(
   projectDir: string,
   testPath?: string,
   testName?: string,
+  extraArgs?: string[],
 ): Promise<TestRunResult> {
   // Run pub get separately so its non-JSON output doesn't pollute the JSON stream
   await runPubGet(projectDir);
@@ -63,6 +64,12 @@ export async function flutterTest(
   }
   if (testPath) {
     args.push(testPath);
+  }
+
+  // Safe: spawn() without shell:true passes args as argv directly,
+  // so shell metacharacters like $() are never interpreted.
+  if (extraArgs) {
+    args.push(...extraArgs);
   }
 
   const output = await runFlutterTest(projectDir, args);

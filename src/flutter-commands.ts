@@ -60,6 +60,31 @@ export async function flutterGenL10n(projectDir: string): Promise<CommandResult>
   return runFlutterCommand(projectDir, ["gen-l10n"]);
 }
 
+const VALID_BUILD_TARGETS = new Set([
+  "apk", "appbundle", "bundle", "ios", "ipa",
+  "web", "macos", "windows", "linux",
+  "aar", "ios-framework", "macos-framework",
+]);
+
+export async function flutterBuild(
+  projectDir: string,
+  target: string,
+  debug: boolean,
+  extraArgs: string[],
+): Promise<CommandResult> {
+  if (!VALID_BUILD_TARGETS.has(target)) {
+    return {
+      success: false,
+      output: `Invalid build target: ${target}. Valid targets: ${[...VALID_BUILD_TARGETS].join(", ")}`,
+    };
+  }
+
+  const args = ["build", target];
+  args.push(debug ? "--debug" : "--release");
+  args.push(...extraArgs);
+  return runFlutterCommand(projectDir, args);
+}
+
 export async function flutterBuildRunner(projectDir: string, deleteConflicting: boolean): Promise<CommandResult> {
   const args = ["run", "build_runner", "build"];
   if (deleteConflicting) args.push("--delete-conflicting-outputs");
