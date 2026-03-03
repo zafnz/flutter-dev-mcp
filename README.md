@@ -60,18 +60,7 @@ npx -y flutter-dev-mcp
 
 ### Claude Code (CLI)
 
-Add to your MCP settings (`~/.claude.json` or project `.mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "flutter-dev": {
-      "command": "npx",
-      "args": ["-y", "flutter-dev-mcp"]
-    }
-  }
-}
-```
+**Easy**: `claude mcp add flutter-dev -- npx -y flutter-dev-mcp`
 
 ### Claude Desktop
 
