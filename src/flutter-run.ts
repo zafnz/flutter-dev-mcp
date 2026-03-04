@@ -17,6 +17,8 @@ const MAX_LOG_LINES = 5000;
 export interface FlutterRunResult {
   run_id: number;
   success: boolean;
+  dev_tools?: string;
+  websocket?: string;
   error?: string;
 }
 
@@ -90,8 +92,9 @@ export async function flutterRun(
   });
 
   // Wait for the app to start or fail
+  let startInfo: AppStartInfo;
   try {
-    await waitForAppStart(instance, dontDetach);
+    startInfo = await waitForAppStart(instance, dontDetach);
   } catch (err) {
     return {
       run_id: runId,
@@ -103,13 +106,20 @@ export async function flutterRun(
   return {
     run_id: runId,
     success: true,
+    dev_tools: startInfo.devToolsUrl,
+    websocket: startInfo.websocketUrl,
   };
+}
+
+interface AppStartInfo {
+  devToolsUrl?: string;
+  websocketUrl?: string;
 }
 
 function waitForAppStart(
   instance: FlutterRunInstance,
   dontDetach: boolean,
-): Promise<void> {
+): Promise<AppStartInfo> {
   return new Promise((resolve, reject) => {
     // The ready indicators in flutter run output
     const readyPatterns = [
@@ -119,18 +129,30 @@ function waitForAppStart(
       /A Dart VM Service/i,
     ];
 
+    const info: AppStartInfo = {};
+    // Match DevTools URL and extract the websocket URI from the query param
+    const devToolsPattern = /https?:\/\/\S+devtools\/\S+/;
+    const wsPattern = /ws:\/\/\S+\/ws/;
+
     const timeout = setTimeout(() => {
       reject(new Error("Timed out waiting for Flutter app to start (120s)"));
     }, 120_000);
 
     const checkLine = (data: Buffer) => {
       const text = data.toString();
+
+      // Extract DevTools and websocket URLs from output
+      const devToolsMatch = text.match(devToolsPattern);
+      if (devToolsMatch) info.devToolsUrl = devToolsMatch[0];
+      const wsMatch = text.match(wsPattern);
+      if (wsMatch) info.websocketUrl = wsMatch[0];
+
       for (const pattern of readyPatterns) {
         if (pattern.test(text)) {
           clearTimeout(timeout);
           instance.started = true;
           instance.process.stdout!.removeListener("data", checkLine);
-          resolve();
+          resolve(info);
           return;
         }
       }
